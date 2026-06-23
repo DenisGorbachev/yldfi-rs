@@ -10,6 +10,8 @@ const VITALIK: &str = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
 const WETH: &str = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 /// BAYC contract
 const BAYC: &str = "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D";
+/// GMX Arbitrum vault address
+const GMX_ARBITRUM_VAULT: &str = "0x489ee077994B6658eAfA855C308275EAd8097C4A";
 
 // =============================================================================
 // Wallet API Tests
@@ -75,7 +77,7 @@ async fn test_get_active_chains() {
     let client = Client::from_env().expect("MORALIS_API_KEY must be set");
     let active = client
         .wallet()
-        .get_active_chains(VITALIK)
+        .get_active_chains(VITALIK, None)
         .await
         .expect("Failed to get active chains");
 
@@ -87,6 +89,31 @@ async fn test_get_active_chains() {
     for chain in &active.active_chains {
         println!("  {} (chain_id: {})", chain.chain, chain.chain_id);
     }
+}
+
+#[tokio::test]
+#[ignore]
+async fn test_get_active_chains_with_query() {
+    let client = Client::from_env().expect("MORALIS_API_KEY must be set");
+    let query = mrls::ActiveChainsQuery::new().chains(["eth", "arbitrum"]);
+    let active = client
+        .wallet()
+        .get_active_chains(GMX_ARBITRUM_VAULT, Some(&query))
+        .await
+        .expect("Failed to get active chains with chains query");
+
+    println!(
+        "Active chains for {}: {}",
+        active.address,
+        active.active_chains.len()
+    );
+    for chain in &active.active_chains {
+        println!("  {} (chain_id: {})", chain.chain, chain.chain_id);
+    }
+    assert!(active
+        .active_chains
+        .iter()
+        .any(|chain| chain.chain == "arbitrum" && chain.chain_id == "0xa4b1"));
 }
 
 #[tokio::test]

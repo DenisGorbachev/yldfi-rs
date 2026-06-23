@@ -800,7 +800,7 @@ async fn handle_wallet(
             if !quiet {
                 eprintln!("Fetching active chains for {}...", address);
             }
-            let response = client.wallet().get_active_chains(address).await?;
+            let response = client.wallet().get_active_chains(address, None).await?;
             print_output(&response, args.format)?;
         }
         WalletCommands::Approvals { address } => {

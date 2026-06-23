@@ -52,6 +52,39 @@ impl WalletQuery {
     }
 }
 
+/// Query parameters for wallet chain activity endpoints
+#[derive(Debug, Default, Clone)]
+pub struct ActiveChainsQuery {
+    /// Chains to query
+    pub chains: Vec<String>,
+}
+
+impl ActiveChainsQuery {
+    /// Create a new query
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Add a chain
+    #[must_use]
+    pub fn chain(mut self, chain: impl Into<String>) -> Self {
+        self.chains.push(chain.into());
+        self
+    }
+
+    /// Add multiple chains
+    #[must_use]
+    pub fn chains<I, S>(mut self, chains: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        self.chains.extend(chains.into_iter().map(Into::into));
+        self
+    }
+}
+
 /// API for wallet operations
 pub struct WalletApi<'a> {
     client: &'a Client,
@@ -114,9 +147,22 @@ impl<'a> WalletApi<'a> {
     }
 
     /// Get active chains for an address
-    pub async fn get_active_chains(&self, address: &str) -> Result<ActiveChains> {
+    pub async fn get_active_chains(
+        &self,
+        address: &str,
+        query: Option<&ActiveChainsQuery>,
+    ) -> Result<ActiveChains> {
         let path = format!("/wallets/{address}/chains");
-        self.client.get(&path).await
+        if let Some(q) = query {
+            let query = q
+                .chains
+                .iter()
+                .map(|chain| ("chains", chain.clone()))
+                .collect::<Vec<_>>();
+            self.client.get_with_query(&path, &query).await
+        } else {
+            self.client.get(&path).await
+        }
     }
 
     /// Get token approvals for an address
