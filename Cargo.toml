@@ -42,6 +42,7 @@ reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"
 # Serialization
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+serde_with = { version = "3", default-features = false, features = ["std", "macros"] }
 
 # Error handling
 thiserror = "2"
@@ -59,6 +60,13 @@ fastrand = "2"
 
 # URL parsing
 url = "2"
+
+alloy-primitives = { version = "1", default-features = false, features = ["std", "serde"] }
+bigdecimal = "0.4"
+derive_more = { version = "2", features = ["from"] }
+solana-address = { version = "2", default-features = false, features = ["std", "copy"] }
+solana-hash = { version = "4", default-features = false, features = ["std", "copy", "decode"] }
+time = { version = "0.3", features = ["serde-well-known"] }
 
 # Workspace-wide release profile settings
 #

@@ -10,16 +10,17 @@ categories = ["api-bindings", "web-programming"]
 readme = "README.md"
 
 [dependencies]
-alloy-primitives = { version = "1", default-features = false, features = ["std", "serde"] }
-bigdecimal = "0.4"
+alloy-primitives = { workspace = true }
+bigdecimal = { workspace = true }
+derive_more = { workspace = true }
 reqwest = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-serde_with = { version = "3", default-features = false, features = ["std", "macros"] }
-solana-address = { version = "2", default-features = false, features = ["std", "copy"] }
-solana-hash = { version = "4", default-features = false, features = ["std", "copy", "decode"] }
+serde_with = { workspace = true }
+solana-address = { workspace = true }
+solana-hash = { workspace = true }
 thiserror = { workspace = true }
-time = { version = "0.3", features = ["serde-well-known"] }
+time = { workspace = true }
 tokio = { workspace = true }
 secrecy = { workspace = true }
 url = { workspace = true, features = ["serde"] }

@@ -50,10 +50,7 @@ impl<'a> PortfolioApi<'a> {
             .await
     }
 
-    /// Get one page of wallet tokens across multiple networks.
-    ///
     /// Includes native and ERC-20 balances with metadata; prices are disabled.
-    /// Takes ownership of the wallet list without rebuilding its contents.
     /// Alchemy supports at most two wallets and five networks per wallet.
     ///
     /// Check the returned network and per-token errors before using the result
@@ -70,13 +67,10 @@ impl<'a> PortfolioApi<'a> {
         self.get_tokens_by_address_with_options(&request).await
     }
 
-    /// Get one page of wallet tokens with metadata, pricing and pagination options.
-    ///
     /// HTTP 200 responses can contain `error.partial_errors` for failed networks
     /// alongside successful tokens. Those networks require separate requests;
     /// following `data.page_key` only continues the successful networks.
     ///
-    /// Serializes the request directly without cloning its wallets or options.
     /// Update `request.options.page_key` to reuse the request for pagination.
     pub async fn get_tokens_by_address_with_options(
         &self,

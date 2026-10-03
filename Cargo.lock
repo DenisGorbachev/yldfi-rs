@@ -35,6 +35,7 @@ version = "0.2.0"
 dependencies = [
  "alloy-primitives",
  "bigdecimal",
+ "derive_more",
  "reqwest 0.12.28",
  "secrecy",
  "serde",

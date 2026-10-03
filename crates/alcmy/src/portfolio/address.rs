@@ -1,29 +1,16 @@
-//! Typed addresses for the EVM and Solana networks supported by the Portfolio API.
-
 pub use alloy_primitives::Address as EvmAddress;
 pub use solana_address::Address as SolanaAddress;
 
+use derive_more::From;
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 use std::{fmt, str::FromStr};
 use thiserror::Error;
 
 /// A wallet or token address, encoded as EVM hex or Solana base58 in JSON.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, DeserializeFromStr, SerializeDisplay)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, From, DeserializeFromStr, SerializeDisplay)]
 pub enum PortfolioAddress {
     Evm(EvmAddress),
     Solana(SolanaAddress),
-}
-
-impl From<EvmAddress> for PortfolioAddress {
-    fn from(address: EvmAddress) -> Self {
-        Self::Evm(address)
-    }
-}
-
-impl From<SolanaAddress> for PortfolioAddress {
-    fn from(address: SolanaAddress) -> Self {
-        Self::Solana(address)
-    }
 }
 
 impl FromStr for PortfolioAddress {

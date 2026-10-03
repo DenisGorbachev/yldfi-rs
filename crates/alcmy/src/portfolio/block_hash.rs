@@ -1,28 +1,15 @@
-//! Typed block hashes with the network's JSON encoding.
-
 use alloy_primitives::B256;
+use derive_more::From;
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 use solana_hash::Hash;
 use std::{fmt, str::FromStr};
 use thiserror::Error;
 
 /// A 32-byte block hash encoded as hex on EVM networks or base58 on Solana.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, DeserializeFromStr, SerializeDisplay)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, From, DeserializeFromStr, SerializeDisplay)]
 pub enum PortfolioBlockHash {
     Evm(B256),
     Solana(Hash),
-}
-
-impl From<B256> for PortfolioBlockHash {
-    fn from(hash: B256) -> Self {
-        Self::Evm(hash)
-    }
-}
-
-impl From<Hash> for PortfolioBlockHash {
-    fn from(hash: Hash) -> Self {
-        Self::Solana(hash)
-    }
 }
 
 impl FromStr for PortfolioBlockHash {

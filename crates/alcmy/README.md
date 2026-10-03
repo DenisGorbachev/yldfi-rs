@@ -179,15 +179,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-Each call returns one page. The default method takes an owned `Vec<PortfolioWallet>`;
-the options method serializes a borrowed `TokensByAddressRequest` directly, so
-pagination reuses the wallets and options without cloning them.
-
-Balances use `U256`, block numbers use `U64`, and networks use `Network`.
-`PortfolioAddress` and `PortfolioBlockHash` hold fixed-size EVM or Solana values
-and preserve the corresponding hex or base58 JSON encoding. Timestamps use
-`time::OffsetDateTime` with RFC 3339 serialization, logo URLs use `url::Url`, and
-prices use `bigdecimal::BigDecimal` with decimal-string serialization.
 `token_address: None` identifies a native token.
 Metadata and its individual fields can be absent, so validate the fields your
 application requires before saving a complete snapshot.

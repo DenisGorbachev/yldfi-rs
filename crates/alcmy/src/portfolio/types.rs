@@ -75,17 +75,14 @@ pub struct WalletTokenBalances {
     pub token_balances: Vec<TokenBalanceEntry>,
 }
 
-/// Request for wallet tokens with balances and optional metadata and prices.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TokensByAddressRequest {
-    /// Wallet addresses and the networks to query for each wallet.
     pub addresses: Vec<PortfolioWallet>,
     #[serde(flatten)]
     pub options: TokensByAddressOptions,
 }
 
-/// A typed wallet address and the networks to query for its token holdings.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PortfolioWallet {
@@ -93,8 +90,6 @@ pub struct PortfolioWallet {
     pub networks: Vec<Network>,
 }
 
-/// Options for fetching one page of wallet tokens.
-///
 /// Defaults include native and ERC-20 balances with metadata, without prices or
 /// block metadata. Pass the returned `data.pageKey` to retrieve the next page.
 #[derive(Debug, Clone, Serialize)]
@@ -122,7 +117,6 @@ impl Default for TokensByAddressOptions {
     }
 }
 
-/// A wallet's token holding on one network.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PortfolioToken {
@@ -142,7 +136,7 @@ pub struct PortfolioToken {
     pub error: Option<String>,
 }
 
-/// Metadata returned alongside a wallet token balance.
+/// Alchemy can return every field as null even when metadata is requested.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PortfolioTokenMetadata {
@@ -152,7 +146,6 @@ pub struct PortfolioTokenMetadata {
     pub logo: Option<Url>,
 }
 
-/// A token's exact decimal price at a particular time.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PortfolioTokenPrice {
@@ -164,7 +157,6 @@ pub struct PortfolioTokenPrice {
     pub last_updated_at: OffsetDateTime,
 }
 
-/// Wallet tokens and pagination information from the Portfolio API.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TokensByAddressData {
@@ -184,12 +176,11 @@ pub struct PortfolioBlockMetadata {
     /// Hex-encoded block number.
     pub block_number: U64,
     pub block_hash: PortfolioBlockHash,
-    /// ISO-8601 timestamp.
     #[serde(with = "time::serde::rfc3339")]
     pub block_timestamp: OffsetDateTime,
 }
 
-/// Response for wallet tokens, including any network failures on HTTP 200.
+/// Network failures can accompany successful results on HTTP 200.
 ///
 /// Check `error` and each token's `error` before treating balances and metadata
 /// as complete. Successful results are retained when other networks fail.
@@ -201,7 +192,6 @@ pub struct TokensByAddressResponse {
     pub error: Option<PortfolioError>,
 }
 
-/// Networks that failed within an otherwise successful Portfolio API request.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PortfolioError {
@@ -211,7 +201,6 @@ pub struct PortfolioError {
     pub partial_errors: Vec<PortfolioNetworkError>,
 }
 
-/// Failure on one requested network.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PortfolioNetworkError {
