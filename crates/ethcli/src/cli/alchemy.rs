@@ -1363,9 +1363,10 @@ async fn handle_portfolio(
             if !quiet {
                 eprintln!("Fetching portfolio for {}...", address);
             }
-            // API expects (address, networks) tuples
-            let networks: &[&str] = &[args.network.as_str()];
-            let addresses: &[(&str, &[&str])] = &[(address.as_str(), networks)];
+            let addresses = vec![alcmy::portfolio::PortfolioWallet {
+                address: address.parse()?,
+                networks: vec![args.network.into()],
+            }];
             let response = client.portfolio().get_tokens_by_address(addresses).await?;
             print_output(&response, args.format)?;
         }
@@ -1373,27 +1374,25 @@ async fn handle_portfolio(
             if !quiet {
                 eprintln!("Fetching wallet tokens...");
             }
-            let wallet_pairs: Vec<(&str, &str)> = wallets
+            let addresses = wallets
                 .split(',')
                 .map(|s| {
-                    let s = s.trim();
-                    s.split_once(':')
+                    let (network, address) = s
+                        .trim()
+                        .split_once(':')
                         .filter(|(network, address)| !network.is_empty() && !address.is_empty())
                         .ok_or_else(|| {
                             anyhow::anyhow!(
                                 "Wallets must be in network:address format (e.g., eth-mainnet:0x...)"
                             )
-                        })
+                        })?;
+                    Ok(alcmy::portfolio::PortfolioWallet {
+                        address: address.parse()?,
+                        networks: vec![network.parse()?],
+                    })
                 })
-                .collect::<anyhow::Result<_>>()?;
-            let networks: Vec<[&str; 1]> =
-                wallet_pairs.iter().map(|(network, _)| [*network]).collect();
-            let addresses: Vec<(&str, &[&str])> = wallet_pairs
-                .iter()
-                .zip(&networks)
-                .map(|((_, address), networks)| (*address, networks.as_slice()))
-                .collect();
-            let response = client.portfolio().get_tokens_by_address(&addresses).await?;
+                .collect::<anyhow::Result<Vec<_>>>()?;
+            let response = client.portfolio().get_tokens_by_address(addresses).await?;
             print_output(&response, args.format)?;
         }
         PortfolioCommands::Nfts {

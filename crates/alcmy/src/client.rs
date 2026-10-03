@@ -3,48 +3,90 @@
 //! This client uses common utilities from `yldfi-common` for HTTP operations.
 
 use crate::error::{self, Error, Result};
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::time::Duration;
+use std::{fmt, str::FromStr};
 use yldfi_common::api::{ApiConfig, SecretApiKey};
 
 /// Supported blockchain networks
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
 pub enum Network {
     // Ethereum
+    #[serde(rename = "eth-mainnet")]
     EthMainnet,
+    #[serde(rename = "eth-sepolia")]
     EthSepolia,
+    #[serde(rename = "eth-holesky")]
     EthHolesky,
     // Polygon
+    #[serde(rename = "polygon-mainnet", alias = "matic-mainnet")]
     PolygonMainnet,
+    #[serde(rename = "polygon-amoy", alias = "matic-amoy")]
     PolygonAmoy,
     // Arbitrum
+    #[serde(rename = "arb-mainnet")]
     ArbitrumMainnet,
+    #[serde(rename = "arb-sepolia")]
     ArbitrumSepolia,
     // Optimism
+    #[serde(rename = "opt-mainnet")]
     OptMainnet,
+    #[serde(rename = "opt-sepolia")]
     OptSepolia,
     // Base
+    #[serde(rename = "base-mainnet")]
     BaseMainnet,
+    #[serde(rename = "base-sepolia")]
     BaseSepolia,
     // zkSync
+    #[serde(rename = "zksync-mainnet")]
     ZksyncMainnet,
+    #[serde(rename = "zksync-sepolia")]
     ZksyncSepolia,
     // Solana
+    #[serde(rename = "solana-mainnet", alias = "sol-mainnet")]
     SolanaMainnet,
+    #[serde(rename = "solana-devnet", alias = "sol-devnet")]
     SolanaDevnet,
     // Other L2s
+    #[serde(rename = "linea-mainnet")]
     LineaMainnet,
+    #[serde(rename = "scroll-mainnet")]
     ScrollMainnet,
+    #[serde(rename = "blast-mainnet")]
     BlastMainnet,
+    #[serde(rename = "mantle-mainnet")]
     MantleMainnet,
+    #[serde(rename = "zora-mainnet")]
     ZoraMainnet,
+    #[serde(rename = "worldchain-mainnet")]
     WorldchainMainnet,
+    #[serde(rename = "shape-mainnet")]
     ShapeMainnet,
+    #[serde(rename = "polygonzkevm-mainnet")]
     PolygonZkevmMainnet,
+    #[serde(rename = "bnb-mainnet")]
     Bnb,
+    #[serde(rename = "avax-mainnet")]
     Avalanche,
+    #[serde(rename = "fantom-mainnet")]
     Fantom,
+    #[serde(rename = "gnosis-mainnet")]
     Gnosis,
+}
+
+impl FromStr for Network {
+    type Err = serde::de::value::Error;
+
+    fn from_str(value: &str) -> std::result::Result<Self, Self::Err> {
+        Self::deserialize(serde::de::value::StrDeserializer::new(value))
+    }
+}
+
+impl fmt::Display for Network {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.data_api_name())
+    }
 }
 
 impl Network {

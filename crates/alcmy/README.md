@@ -137,19 +137,26 @@ request metadata, and disable prices. Use `get_tokens_by_address_with_options`
 to change those flags, include block metadata, or continue pagination.
 
 ```rust
-use alcmy::{portfolio::TokensByAddressOptions, Client, Network};
+use alcmy::{
+    portfolio::{PortfolioWallet, TokensByAddressOptions, TokensByAddressRequest},
+    Client, Network,
+};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Client::new("your-api-key", Network::EthMainnet)?;
-    let networks: &[&str] = &["eth-mainnet", "base-mainnet"];
-    let wallets = &[("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", networks)];
-    let mut options = TokensByAddressOptions::default();
+    let mut request = TokensByAddressRequest {
+        addresses: vec![PortfolioWallet {
+            address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045".parse()?,
+            networks: vec![Network::EthMainnet, Network::BaseMainnet],
+        }],
+        options: TokensByAddressOptions::default(),
+    };
 
     loop {
         let response = client
             .portfolio()
-            .get_tokens_by_address_with_options(wallets, &options)
+            .get_tokens_by_address_with_options(&request)
             .await?;
 
         if let Some(error) = response.error {
@@ -164,7 +171,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         match response.data.page_key {
-            Some(page_key) => options.page_key = Some(page_key),
+            Some(page_key) => request.options.page_key = Some(page_key),
             None => break,
         }
     }
@@ -172,8 +179,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-Each call returns one page. Balances remain hex strings so callers can parse them
-without losing precision. `token_address: None` identifies a native token.
+Each call returns one page. The default method takes an owned `Vec<PortfolioWallet>`;
+the options method serializes a borrowed `TokensByAddressRequest` directly, so
+pagination reuses the wallets and options without cloning them.
+
+Balances use `U256`, block numbers use `U64`, and networks use `Network`.
+`PortfolioAddress` and `PortfolioBlockHash` hold fixed-size EVM or Solana values
+and preserve the corresponding hex or base58 JSON encoding. Timestamps use
+`time::OffsetDateTime` with RFC 3339 serialization, logo URLs use `url::Url`, and
+prices use `bigdecimal::BigDecimal` with decimal-string serialization.
+`token_address: None` identifies a native token.
 Metadata and its individual fields can be absent, so validate the fields your
 application requires before saving a complete snapshot.
 

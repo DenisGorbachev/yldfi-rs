@@ -2,8 +2,8 @@
 
 use super::types::{
     AddressNetwork, NftContractsByAddressRequest, NftContractsByAddressResponse,
-    NftsByAddressRequest, NftsByAddressResponse, TokenBalancesRequest, TokenBalancesResponse,
-    TokensByAddressOptions, TokensByAddressRequest, TokensByAddressResponse,
+    NftsByAddressRequest, NftsByAddressResponse, PortfolioWallet, TokenBalancesRequest,
+    TokenBalancesResponse, TokensByAddressOptions, TokensByAddressRequest, TokensByAddressResponse,
 };
 use crate::client::Client;
 use crate::error::Result;
@@ -53,18 +53,21 @@ impl<'a> PortfolioApi<'a> {
     /// Get one page of wallet tokens across multiple networks.
     ///
     /// Includes native and ERC-20 balances with metadata; prices are disabled.
-    /// `addresses` contains (wallet address, networks) tuples. Alchemy supports
-    /// at most two wallets and five networks per wallet in a request.
+    /// Takes ownership of the wallet list without rebuilding its contents.
+    /// Alchemy supports at most two wallets and five networks per wallet.
     ///
     /// Check the returned network and per-token errors before using the result
     /// as a complete balance snapshot. For additional pages, pass `data.page_key`
     /// to [`Self::get_tokens_by_address_with_options`].
     pub async fn get_tokens_by_address(
         &self,
-        addresses: &[(&str, &[&str])],
+        addresses: Vec<PortfolioWallet>,
     ) -> Result<TokensByAddressResponse> {
-        self.get_tokens_by_address_with_options(addresses, &TokensByAddressOptions::default())
-            .await
+        let request = TokensByAddressRequest {
+            addresses,
+            options: TokensByAddressOptions::default(),
+        };
+        self.get_tokens_by_address_with_options(&request).await
     }
 
     /// Get one page of wallet tokens with metadata, pricing and pagination options.
@@ -72,26 +75,15 @@ impl<'a> PortfolioApi<'a> {
     /// HTTP 200 responses can contain `error.partial_errors` for failed networks
     /// alongside successful tokens. Those networks require separate requests;
     /// following `data.page_key` only continues the successful networks.
+    ///
+    /// Serializes the request directly without cloning its wallets or options.
+    /// Update `request.options.page_key` to reuse the request for pagination.
     pub async fn get_tokens_by_address_with_options(
         &self,
-        addresses: &[(&str, &[&str])],
-        options: &TokensByAddressOptions,
+        request: &TokensByAddressRequest,
     ) -> Result<TokensByAddressResponse> {
-        let body = TokensByAddressRequest {
-            addresses: addresses
-                .iter()
-                .map(|(address, networks)| AddressNetwork {
-                    address: address.to_string(),
-                    networks: networks
-                        .iter()
-                        .map(std::string::ToString::to_string)
-                        .collect(),
-                })
-                .collect(),
-            options: options.clone(),
-        };
         self.client
-            .data_post("assets/tokens/by-address", &body)
+            .data_post("assets/tokens/by-address", request)
             .await
     }
 

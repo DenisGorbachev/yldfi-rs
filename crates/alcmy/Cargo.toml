@@ -10,12 +10,19 @@ categories = ["api-bindings", "web-programming"]
 readme = "README.md"
 
 [dependencies]
+alloy-primitives = { version = "1", default-features = false, features = ["std", "serde"] }
+bigdecimal = "0.4"
 reqwest = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+serde_with = { version = "3", default-features = false, features = ["std", "macros"] }
+solana-address = { version = "2", default-features = false, features = ["std", "copy"] }
+solana-hash = { version = "4", default-features = false, features = ["std", "copy", "decode"] }
 thiserror = { workspace = true }
+time = { version = "0.3", features = ["serde-well-known"] }
 tokio = { workspace = true }
 secrecy = { workspace = true }
+url = { workspace = true, features = ["serde"] }
 yldfi-common = { version = "0.1", path = "../yldfi-common" }
 
 [dev-dependencies]

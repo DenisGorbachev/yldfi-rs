@@ -1,10 +1,14 @@
 //! Types for the Portfolio/Data API
 
+use alloy_primitives::{U256, U64};
+use bigdecimal::BigDecimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use time::OffsetDateTime;
+use url::Url;
 
-use crate::prices::PriceEntry;
-use crate::token::RpcTokenMetadata;
+use super::{PortfolioAddress, PortfolioBlockHash};
+use crate::Network;
 
 /// Address-network pair for queries
 #[derive(Debug, Clone, Serialize)]
@@ -76,9 +80,17 @@ pub struct WalletTokenBalances {
 #[serde(rename_all = "camelCase")]
 pub struct TokensByAddressRequest {
     /// Wallet addresses and the networks to query for each wallet.
-    pub addresses: Vec<AddressNetwork>,
+    pub addresses: Vec<PortfolioWallet>,
     #[serde(flatten)]
     pub options: TokensByAddressOptions,
+}
+
+/// A typed wallet address and the networks to query for its token holdings.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PortfolioWallet {
+    pub address: PortfolioAddress,
+    pub networks: Vec<Network>,
 }
 
 /// Options for fetching one page of wallet tokens.
@@ -115,19 +127,41 @@ impl Default for TokensByAddressOptions {
 #[serde(rename_all = "camelCase")]
 pub struct PortfolioToken {
     /// Wallet address, not the token contract address.
-    pub address: String,
-    pub network: String,
+    pub address: PortfolioAddress,
+    pub network: Network,
     /// Token contract address; `None` identifies the network's native token.
-    pub token_address: Option<String>,
-    /// Raw balance as a hex string, preserving its full integer precision.
-    pub token_balance: String,
+    pub token_address: Option<PortfolioAddress>,
+    /// Raw balance in the token's smallest unit; serialized as a hex quantity.
+    pub token_balance: U256,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub token_metadata: Option<RpcTokenMetadata>,
+    pub token_metadata: Option<PortfolioTokenMetadata>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub token_prices: Option<Vec<PriceEntry>>,
+    pub token_prices: Option<Vec<PortfolioTokenPrice>>,
     /// Per-token metadata or pricing failure, distinct from network failures.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
+}
+
+/// Metadata returned alongside a wallet token balance.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PortfolioTokenMetadata {
+    pub name: Option<String>,
+    pub symbol: Option<String>,
+    pub decimals: Option<u8>,
+    pub logo: Option<Url>,
+}
+
+/// A token's exact decimal price at a particular time.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PortfolioTokenPrice {
+    /// Currency identifier supplied by Alchemy, such as "usd".
+    pub currency: String,
+    #[serde(with = "serde_with::As::<serde_with::DisplayFromStr>")]
+    pub value: BigDecimal,
+    #[serde(with = "time::serde::rfc3339")]
+    pub last_updated_at: OffsetDateTime,
 }
 
 /// Wallet tokens and pagination information from the Portfolio API.
@@ -140,7 +174,7 @@ pub struct TokensByAddressData {
     pub page_key: Option<String>,
     /// Blocks used for the balances, keyed by network; failed networks map to null.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub block_metadata: Option<HashMap<String, Option<PortfolioBlockMetadata>>>,
+    pub block_metadata: Option<HashMap<Network, Option<PortfolioBlockMetadata>>>,
 }
 
 /// Block used to compute balances on a network.
@@ -148,10 +182,11 @@ pub struct TokensByAddressData {
 #[serde(rename_all = "camelCase")]
 pub struct PortfolioBlockMetadata {
     /// Hex-encoded block number.
-    pub block_number: String,
-    pub block_hash: String,
+    pub block_number: U64,
+    pub block_hash: PortfolioBlockHash,
     /// ISO-8601 timestamp.
-    pub block_timestamp: String,
+    #[serde(with = "time::serde::rfc3339")]
+    pub block_timestamp: OffsetDateTime,
 }
 
 /// Response for wallet tokens, including any network failures on HTTP 200.
@@ -180,7 +215,7 @@ pub struct PortfolioError {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PortfolioNetworkError {
-    pub network: String,
+    pub network: Network,
     /// Human-readable context, not a stable error code.
     pub message: String,
 }
