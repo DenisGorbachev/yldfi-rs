@@ -129,6 +129,66 @@ println!("{} ({})", metadata.name.unwrap(), metadata.symbol.unwrap());
 let allowance = client.token().get_token_allowance("0xtoken", "0xowner", "0xspender").await?;
 ```
 
+### Portfolio API
+
+Fetch wallet balances and token metadata across networks with
+`get_tokens_by_address`. The default options include native and ERC-20 tokens,
+request metadata, and disable prices. Use `get_tokens_by_address_with_options`
+to change those flags, include block metadata, or continue pagination.
+
+```rust
+use alcmy::{portfolio::TokensByAddressOptions, Client, Network};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Client::new("your-api-key", Network::EthMainnet)?;
+    let networks: &[&str] = &["eth-mainnet", "base-mainnet"];
+    let wallets = &[("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", networks)];
+    let mut options = TokensByAddressOptions::default();
+
+    loop {
+        let response = client
+            .portfolio()
+            .get_tokens_by_address_with_options(wallets, &options)
+            .await?;
+
+        if let Some(error) = response.error {
+            return Err(format!("{}: {:?}", error.message, error.partial_errors).into());
+        }
+        for token in response.data.tokens {
+            if let Some(error) = token.error {
+                return Err(format!("{} {:?}: {error}", token.network, token.token_address).into());
+            }
+            println!("{} {:?}: {} {:?}",
+                token.network, token.token_address, token.token_balance, token.token_metadata);
+        }
+
+        match response.data.page_key {
+            Some(page_key) => options.page_key = Some(page_key),
+            None => break,
+        }
+    }
+    Ok(())
+}
+```
+
+Each call returns one page. Balances remain hex strings so callers can parse them
+without losing precision. `token_address: None` identifies a native token.
+Metadata and its individual fields can be absent, so validate the fields your
+application requires before saving a complete snapshot.
+
+HTTP 200 can include `response.error.partial_errors` alongside successful tokens.
+The response preserves both. Retry failed networks in separate requests with a
+bounded retry policy; a pagination cursor does not retry them. Per-token errors
+are separate metadata or pricing failures. See Alchemy's
+[endpoint documentation](https://www.alchemy.com/docs/data/portfolio-apis/portfolio-api-endpoints/portfolio-api-endpoints/get-tokens-by-address)
+and [partial-failure guidance](https://www.alchemy.com/docs/reference/portfolio-apis#handling-partial-failures).
+
+The incorrectly modeled `get_token_info` method and its `TokenInfoRequest`,
+`TokenAddressInfo`, `TokenInfo`, and `TokenInfoResponse` types were removed. Use
+`get_tokens_by_address` for wallet holdings, or `token().get_token_metadata` to
+look up a token contract's metadata.
+
 ### Transfers API
 
 ```rust

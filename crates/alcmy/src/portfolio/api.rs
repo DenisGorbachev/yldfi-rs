@@ -2,8 +2,8 @@
 
 use super::types::{
     AddressNetwork, NftContractsByAddressRequest, NftContractsByAddressResponse,
-    NftsByAddressRequest, NftsByAddressResponse, TokenAddressInfo, TokenBalancesRequest,
-    TokenBalancesResponse, TokenInfoRequest, TokenInfoResponse,
+    NftsByAddressRequest, NftsByAddressResponse, TokenBalancesRequest, TokenBalancesResponse,
+    TokensByAddressOptions, TokensByAddressRequest, TokensByAddressResponse,
 };
 use crate::client::Client;
 use crate::error::Result;
@@ -50,19 +50,45 @@ impl<'a> PortfolioApi<'a> {
             .await
     }
 
-    /// Get token info for multiple tokens
+    /// Get one page of wallet tokens across multiple networks.
     ///
-    /// # Arguments
-    /// * `tokens` - List of (network, address) tuples
-    pub async fn get_token_info(&self, tokens: &[(&str, &str)]) -> Result<TokenInfoResponse> {
-        let body = TokenInfoRequest {
-            addresses: tokens
+    /// Includes native and ERC-20 balances with metadata; prices are disabled.
+    /// `addresses` contains (wallet address, networks) tuples. Alchemy supports
+    /// at most two wallets and five networks per wallet in a request.
+    ///
+    /// Check the returned network and per-token errors before using the result
+    /// as a complete balance snapshot. For additional pages, pass `data.page_key`
+    /// to [`Self::get_tokens_by_address_with_options`].
+    pub async fn get_tokens_by_address(
+        &self,
+        addresses: &[(&str, &[&str])],
+    ) -> Result<TokensByAddressResponse> {
+        self.get_tokens_by_address_with_options(addresses, &TokensByAddressOptions::default())
+            .await
+    }
+
+    /// Get one page of wallet tokens with metadata, pricing and pagination options.
+    ///
+    /// HTTP 200 responses can contain `error.partial_errors` for failed networks
+    /// alongside successful tokens. Those networks require separate requests;
+    /// following `data.page_key` only continues the successful networks.
+    pub async fn get_tokens_by_address_with_options(
+        &self,
+        addresses: &[(&str, &[&str])],
+        options: &TokensByAddressOptions,
+    ) -> Result<TokensByAddressResponse> {
+        let body = TokensByAddressRequest {
+            addresses: addresses
                 .iter()
-                .map(|(network, address)| TokenAddressInfo {
-                    network: network.to_string(),
+                .map(|(address, networks)| AddressNetwork {
                     address: address.to_string(),
+                    networks: networks
+                        .iter()
+                        .map(std::string::ToString::to_string)
+                        .collect(),
                 })
                 .collect(),
+            options: options.clone(),
         };
         self.client
             .data_post("assets/tokens/by-address", &body)

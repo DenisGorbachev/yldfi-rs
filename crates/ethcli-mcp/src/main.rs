@@ -2161,7 +2161,9 @@ impl EthcliMcpServer {
     // ALCHEMY PORTFOLIO (additional)
     // =========================================================================
 
-    #[tool(description = "Get token info for multiple tokens via Alchemy Portfolio API")]
+    #[tool(
+        description = "Get wallet token balances and metadata across networks via Alchemy Portfolio API"
+    )]
     async fn alchemy_portfolio_token_info(
         &self,
         Parameters(input): Parameters<AlchemyPortfolioTokenInfoInput>,

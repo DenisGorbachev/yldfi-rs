@@ -1,6 +1,10 @@
 //! Types for the Portfolio/Data API
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+
+use crate::prices::PriceEntry;
+use crate::token::RpcTokenMetadata;
 
 /// Address-network pair for queries
 #[derive(Debug, Clone, Serialize)]
@@ -67,48 +71,118 @@ pub struct WalletTokenBalances {
     pub token_balances: Vec<TokenBalanceEntry>,
 }
 
-/// Request for token info
+/// Request for wallet tokens with balances and optional metadata and prices.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TokenInfoRequest {
-    pub addresses: Vec<TokenAddressInfo>,
+pub struct TokensByAddressRequest {
+    /// Wallet addresses and the networks to query for each wallet.
+    pub addresses: Vec<AddressNetwork>,
+    #[serde(flatten)]
+    pub options: TokensByAddressOptions,
 }
 
-/// Token address info for lookup
+/// Options for fetching one page of wallet tokens.
+///
+/// Defaults include native and ERC-20 balances with metadata, without prices or
+/// block metadata. Pass the returned `data.pageKey` to retrieve the next page.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TokenAddressInfo {
-    /// Network name
-    pub network: String,
-    /// Token contract address
-    pub address: String,
+pub struct TokensByAddressOptions {
+    pub with_metadata: bool,
+    pub with_prices: bool,
+    pub include_native_tokens: bool,
+    pub include_erc20_tokens: bool,
+    pub include_block_metadata: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub page_key: Option<String>,
 }
 
-/// Token info entry
+impl Default for TokensByAddressOptions {
+    fn default() -> Self {
+        Self {
+            with_metadata: true,
+            with_prices: false,
+            include_native_tokens: true,
+            include_erc20_tokens: true,
+            include_block_metadata: false,
+            page_key: None,
+        }
+    }
+}
+
+/// A wallet's token holding on one network.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TokenInfo {
-    /// Token contract address
+pub struct PortfolioToken {
+    /// Wallet address, not the token contract address.
     pub address: String,
-    /// Network name
     pub network: String,
-    /// Token name
-    pub name: Option<String>,
-    /// Token symbol
-    pub symbol: Option<String>,
-    /// Token decimals
-    pub decimals: Option<u8>,
-    /// Token logo URL
-    pub logo: Option<String>,
-    /// Error if token info couldn't be fetched
+    /// Token contract address; `None` identifies the network's native token.
+    pub token_address: Option<String>,
+    /// Raw balance as a hex string, preserving its full integer precision.
+    pub token_balance: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub token_metadata: Option<RpcTokenMetadata>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub token_prices: Option<Vec<PriceEntry>>,
+    /// Per-token metadata or pricing failure, distinct from network failures.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
 }
 
-/// Response for token info
+/// Wallet tokens and pagination information from the Portfolio API.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TokenInfoResponse {
-    pub data: Vec<TokenInfo>,
+pub struct TokensByAddressData {
+    pub tokens: Vec<PortfolioToken>,
+    /// Cursor for the next page. Absent or null when there are no more pages.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub page_key: Option<String>,
+    /// Blocks used for the balances, keyed by network; failed networks map to null.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub block_metadata: Option<HashMap<String, Option<PortfolioBlockMetadata>>>,
+}
+
+/// Block used to compute balances on a network.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PortfolioBlockMetadata {
+    /// Hex-encoded block number.
+    pub block_number: String,
+    pub block_hash: String,
+    /// ISO-8601 timestamp.
+    pub block_timestamp: String,
+}
+
+/// Response for wallet tokens, including any network failures on HTTP 200.
+///
+/// Check `error` and each token's `error` before treating balances and metadata
+/// as complete. Successful results are retained when other networks fail.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TokensByAddressResponse {
+    pub data: TokensByAddressData,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<PortfolioError>,
+}
+
+/// Networks that failed within an otherwise successful Portfolio API request.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PortfolioError {
+    pub message: String,
+    /// Failed networks need new requests; following `pageKey` does not retry them.
+    /// A network can occur more than once when requested for multiple wallets.
+    pub partial_errors: Vec<PortfolioNetworkError>,
+}
+
+/// Failure on one requested network.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PortfolioNetworkError {
+    pub network: String,
+    /// Human-readable context, not a stable error code.
+    pub message: String,
 }
 
 /// Request for NFTs by address

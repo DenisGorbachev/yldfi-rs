@@ -1668,7 +1668,7 @@ pub struct AlchemyTransfersAllInput {
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AlchemyPortfolioTokenInfoInput {
-    /// Comma-separated tokens in network:address format (e.g., eth-mainnet:0x...)
+    /// Comma-separated wallet addresses in network:address format (e.g., eth-mainnet:0x...)
     pub tokens: String,
     /// Alchemy network name (e.g., eth-mainnet, polygon-mainnet)
     #[serde(default = "default_network")]

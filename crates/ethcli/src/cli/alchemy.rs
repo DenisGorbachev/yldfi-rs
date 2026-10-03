@@ -388,16 +388,16 @@ pub enum TransferCommands {
 
 #[derive(Subcommand)]
 pub enum PortfolioCommands {
-    /// Get token balances with prices
+    /// Get wallet token balances with metadata
     Tokens {
         /// Address to query
         address: String,
     },
 
-    /// Get token info for multiple tokens
+    /// Get wallet token balances and metadata across networks
     TokenInfo {
-        /// Comma-separated token addresses (network:address format, e.g., eth-mainnet:0x...)
-        tokens: String,
+        /// Comma-separated wallets (network:address format, e.g., eth-mainnet:0x...)
+        wallets: String,
     },
 
     /// Get NFTs owned by an address
@@ -1366,24 +1366,34 @@ async fn handle_portfolio(
             // API expects (address, networks) tuples
             let networks: &[&str] = &[args.network.as_str()];
             let addresses: &[(&str, &[&str])] = &[(address.as_str(), networks)];
-            let response = client.portfolio().get_token_balances(addresses).await?;
+            let response = client.portfolio().get_tokens_by_address(addresses).await?;
             print_output(&response, args.format)?;
         }
-        PortfolioCommands::TokenInfo { tokens } => {
+        PortfolioCommands::TokenInfo { wallets } => {
             if !quiet {
-                eprintln!("Fetching token info...");
+                eprintln!("Fetching wallet tokens...");
             }
-            let token_pairs: Vec<(&str, &str)> = tokens
+            let wallet_pairs: Vec<(&str, &str)> = wallets
                 .split(',')
-                .filter_map(|s| {
+                .map(|s| {
                     let s = s.trim();
                     s.split_once(':')
+                        .filter(|(network, address)| !network.is_empty() && !address.is_empty())
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "Wallets must be in network:address format (e.g., eth-mainnet:0x...)"
+                            )
+                        })
                 })
+                .collect::<anyhow::Result<_>>()?;
+            let networks: Vec<[&str; 1]> =
+                wallet_pairs.iter().map(|(network, _)| [*network]).collect();
+            let addresses: Vec<(&str, &[&str])> = wallet_pairs
+                .iter()
+                .zip(&networks)
+                .map(|((_, address), networks)| (*address, networks.as_slice()))
                 .collect();
-            if token_pairs.is_empty() {
-                anyhow::bail!("Tokens must be in network:address format (e.g., eth-mainnet:0x...)");
-            }
-            let response = client.portfolio().get_token_info(&token_pairs).await?;
+            let response = client.portfolio().get_tokens_by_address(&addresses).await?;
             print_output(&response, args.format)?;
         }
         PortfolioCommands::Nfts {
